@@ -1488,7 +1488,8 @@ export namespace ACP {
     async readTextFile(params: { sessionId: string; path: string }) {
       log.info("fs/read_text_file request", { sessionId: params.sessionId, path: params.path })
 
-      const session = this.sessionManager.get(params.sessionId)
+      // Validate session exists (throws if not found)
+      this.sessionManager.get(params.sessionId)
 
       // Use existing AgentSideConnection method (handles permissions automatically)
       return await this.connection.readTextFile({
@@ -1507,7 +1508,8 @@ export namespace ACP {
         contentLength: params.content.length,
       })
 
-      const session = this.sessionManager.get(params.sessionId)
+      // Validate session exists (throws if not found)
+      this.sessionManager.get(params.sessionId)
 
       // Use existing AgentSideConnection method (handles permissions automatically)
       await this.connection.writeTextFile({
