@@ -34,16 +34,18 @@ function createFakeFilesystemAgent() {
     },
   } as unknown as AgentSideConnection
 
+  const sessions = new Map<string, { cwd: string }>()
+
   const sessionManager = {
-    sessions: new Map<string, { cwd: string }>(),
+    sessions,
     create: (cwd: string) => {
       const sessionId = `ses_${Date.now()}`
       const session = { id: sessionId, cwd }
-      this.sessions.set(sessionId, { cwd })
+      sessions.set(sessionId, { cwd })
       return session
     },
     get: (sessionId: string) => {
-      const session = this.sessions.get(sessionId)
+      const session = sessions.get(sessionId)
       if (!session) {
         throw new Error(`Session not found: ${sessionId}`)
       }
@@ -89,7 +91,7 @@ function createFakeFilesystemAgent() {
   // Mock the session manager
   ;(agent as any).sessionManager = sessionManager
 
-  return { agent, fileOperations, fileContents, connection }
+  return { agent, fileOperations, fileContents, connection, sessions }
 }
 
 describe("acp.agent filesystem capabilities", () => {
@@ -124,7 +126,7 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent, fileOperations, fileContents } = createFakeFilesystemAgent()
+        const { agent, fileOperations, fileContents, sessions } = createFakeFilesystemAgent()
 
         const sessionId = "test-session"
         const filePath = "/tmp/test-file.txt"
@@ -134,7 +136,7 @@ describe("acp.agent filesystem capabilities", () => {
         fileContents.set(filePath, fileContent)
 
         // Mock session
-        ;(agent as any).sessionManager.sessions.set(sessionId, { cwd: "/tmp" })
+        sessions.set(sessionId, { cwd: "/tmp" })
 
         const result = await agent.readTextFile({
           sessionId,
@@ -174,13 +176,13 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent } = createFakeFilesystemAgent()
+        const { agent, sessions } = createFakeFilesystemAgent()
 
         const sessionId = "test-session"
         const filePath = "/tmp/nonexistent-file.txt"
 
         // Mock session
-        ;(agent as any).sessionManager.sessions.set(sessionId, { cwd: "/tmp" })
+        sessions.set(sessionId, { cwd: "/tmp" })
 
         await expect(
           agent.readTextFile({
@@ -197,14 +199,14 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent, fileOperations, fileContents } = createFakeFilesystemAgent()
+        const { agent, fileOperations, fileContents, sessions } = createFakeFilesystemAgent()
 
         const sessionId = "test-session"
         const filePath = "/tmp/output.txt"
         const content = "Content written by ACP"
 
         // Mock session
-        ;(agent as any).sessionManager.sessions.set(sessionId, { cwd: "/tmp" })
+        sessions.set(sessionId, { cwd: "/tmp" })
 
         const result = await agent.writeTextFile({
           sessionId,
@@ -248,7 +250,7 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent, fileOperations, fileContents } = createFakeFilesystemAgent()
+        const { agent, fileOperations, fileContents, sessions } = createFakeFilesystemAgent()
 
         const sessionA = "session-a"
         const sessionB = "session-b"
@@ -258,8 +260,8 @@ describe("acp.agent filesystem capabilities", () => {
         const contentB = "Content from session B"
 
         // Mock sessions with different working directories
-        ;(agent as any).sessionManager.sessions.set(sessionA, { cwd: "/project-a" })
-        ;(agent as any).sessionManager.sessions.set(sessionB, { cwd: "/project-b" })
+        sessions.set(sessionA, { cwd: "/project-a" })
+        sessions.set(sessionB, { cwd: "/project-b" })
 
         // Write files from different sessions
         await agent.writeTextFile({ sessionId: sessionA, path: fileA, content: contentA })
@@ -287,14 +289,14 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent, fileContents } = createFakeFilesystemAgent()
+        const { agent, fileContents, sessions } = createFakeFilesystemAgent()
 
         const sessionId = "test-session"
         const filePath = "/tmp/empty.txt"
         const emptyContent = ""
 
         // Mock session
-        ;(agent as any).sessionManager.sessions.set(sessionId, { cwd: "/tmp" })
+        sessions.set(sessionId, { cwd: "/tmp" })
 
         // Write empty content
         await agent.writeTextFile({ sessionId, path: filePath, content: emptyContent })
@@ -313,14 +315,14 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent, fileContents } = createFakeFilesystemAgent()
+        const { agent, fileContents, sessions } = createFakeFilesystemAgent()
 
         const sessionId = "test-session"
         const filePath = "/tmp/large.txt"
         const largeContent = "A".repeat(10000) // 10KB of 'A's
 
         // Mock session
-        ;(agent as any).sessionManager.sessions.set(sessionId, { cwd: "/tmp" })
+        sessions.set(sessionId, { cwd: "/tmp" })
 
         // Write large content
         await agent.writeTextFile({ sessionId, path: filePath, content: largeContent })
@@ -340,14 +342,14 @@ describe("acp.agent filesystem capabilities", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { agent, fileContents } = createFakeFilesystemAgent()
+        const { agent, fileContents, sessions } = createFakeFilesystemAgent()
 
         const sessionId = "test-session"
         const filePath = "/tmp/unicode.txt"
         const unicodeContent = "Hello 世界! 🚀 Emoji and unicode: αβγδε"
 
         // Mock session
-        ;(agent as any).sessionManager.sessions.set(sessionId, { cwd: "/tmp" })
+        sessions.set(sessionId, { cwd: "/tmp" })
 
         // Write unicode content
         await agent.writeTextFile({ sessionId, path: filePath, content: unicodeContent })
