@@ -553,6 +553,10 @@ export namespace ACP {
             list: {},
             resume: {},
           },
+          fsCapabilities: {
+            readTextFile: true,
+            writeTextFile: true,
+          },
         },
         authMethods: [authMethod],
         agentInfo: {
@@ -1476,6 +1480,43 @@ export namespace ACP {
         },
         { throwOnError: true },
       )
+    }
+
+    /**
+     * Handle fs/read_text_file ACP method
+     */
+    async readTextFile(params: { sessionId: string; path: string }) {
+      log.info("fs/read_text_file request", { sessionId: params.sessionId, path: params.path })
+
+      const session = this.sessionManager.get(params.sessionId)
+
+      // Use existing AgentSideConnection method (handles permissions automatically)
+      return await this.connection.readTextFile({
+        sessionId: params.sessionId,
+        path: params.path,
+      })
+    }
+
+    /**
+     * Handle fs/write_text_file ACP method
+     */
+    async writeTextFile(params: { sessionId: string; path: string; content: string }) {
+      log.info("fs/write_text_file request", {
+        sessionId: params.sessionId,
+        path: params.path,
+        contentLength: params.content.length,
+      })
+
+      const session = this.sessionManager.get(params.sessionId)
+
+      // Use existing AgentSideConnection method (handles permissions automatically)
+      await this.connection.writeTextFile({
+        sessionId: params.sessionId,
+        path: params.path,
+        content: params.content,
+      })
+
+      return {} // ACP convention for successful write operations
     }
   }
 
